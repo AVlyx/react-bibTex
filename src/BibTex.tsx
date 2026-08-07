@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { latexToText } from "./latex";
 import { type BibEntry, parse } from "./parse";
 import { type BibTexSlot, type BibTexStyles, styleFor } from "./styles";
 
@@ -38,6 +39,8 @@ export function BibTex({ children, entry: parsed, refs, id, styles }: BibTexProp
 
   const { type, fields } = entry;
   const doi = fields.doi ? doiParts(fields.doi) : undefined;
+  // The DOI is deliberately left raw: it is an identifier, not prose.
+  const text = (field: string) => (field ? latexToText(field) : field);
 
   return (
     <span id={id} style={style("entry")} data-type={type}>
@@ -48,24 +51,24 @@ export function BibTex({ children, entry: parsed, refs, id, styles }: BibTexProp
           </sup>{" "}
         </Fragment>
       ))}
-      {fields.author && <span style={style("author")}>{fields.author}. </span>}
+      {fields.author && <span style={style("author")}>{text(fields.author)}. </span>}
       {fields.title && (
         <>
-          <em style={style("title")}>{fields.title}</em>.{" "}
+          <em style={style("title")}>{text(fields.title)}</em>.{" "}
         </>
       )}
       {fields.journal && (
         <>
-          <strong style={style("journal")}>{fields.journal}</strong>.{" "}
+          <strong style={style("journal")}>{text(fields.journal)}</strong>.{" "}
         </>
       )}
       {fields.volume && (
         <span style={style("volume")}>
-          vol. {fields.volume}
-          {fields.number && `(${fields.number})`}.{" "}
+          vol. {text(fields.volume)}
+          {fields.number && `(${text(fields.number)})`}.{" "}
         </span>
       )}
-      {fields.year && <span style={style("year")}>({fields.year}). </span>}
+      {fields.year && <span style={style("year")}>({text(fields.year)}). </span>}
       {doi && (
         <>
           <a href={doi.href} style={style("doi")}>
