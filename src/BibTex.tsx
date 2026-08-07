@@ -1,6 +1,6 @@
 import { Fragment } from "react";
-import { BibEntry, parse } from "./parse";
-import { BibTexStyles, styleFor } from "./styles";
+import { type BibEntry, parse } from "./parse";
+import { type BibTexSlot, type BibTexStyles, styleFor } from "./styles";
 
 interface BibTexCommon {
   id?: string;
@@ -23,12 +23,14 @@ const doiParts = (doi: string) => {
 };
 
 export function BibTex({ children, entry: parsed, refs, id, styles }: BibTexProps) {
+  const style = (slot: BibTexSlot) => styleFor(slot, styles);
+
   let entry: BibEntry;
   try {
     entry = parsed ?? parse(children ?? "").bibEntry;
   } catch (error) {
     return (
-      <span role="alert" style={styleFor("entry", styles)}>
+      <span role="alert" style={style("entry")}>
         {error instanceof Error ? error.message : "Could not read this BibTeX source."}
       </span>
     );
@@ -38,35 +40,35 @@ export function BibTex({ children, entry: parsed, refs, id, styles }: BibTexProp
   const doi = fields.doi ? doiParts(fields.doi) : undefined;
 
   return (
-    <span id={id} style={styleFor("entry")} data-type={type}>
+    <span id={id} style={style("entry")} data-type={type}>
       {refs?.map(({ n, link }) => (
         <Fragment key={link}>
-          <sup style={styleFor("marker")}>
+          <sup style={style("marker")}>
             <a href={link}>{n}</a>
           </sup>{" "}
         </Fragment>
       ))}
-      {fields.author && <span style={styleFor("author")}>{fields.author}. </span>}
+      {fields.author && <span style={style("author")}>{fields.author}. </span>}
       {fields.title && (
         <>
-          <em style={styleFor("title")}>{fields.title}</em>.{" "}
+          <em style={style("title")}>{fields.title}</em>.{" "}
         </>
       )}
       {fields.journal && (
         <>
-          <strong style={styleFor("journal")}>{fields.journal}</strong>.{" "}
+          <strong style={style("journal")}>{fields.journal}</strong>.{" "}
         </>
       )}
       {fields.volume && (
-        <span style={styleFor("volume")}>
+        <span style={style("volume")}>
           vol. {fields.volume}
           {fields.number && `(${fields.number})`}.{" "}
         </span>
       )}
-      {fields.year && <span style={styleFor("year")}>({fields.year}). </span>}
+      {fields.year && <span style={style("year")}>({fields.year}). </span>}
       {doi && (
         <>
-          <a href={doi.href} style={styleFor("doi")}>
+          <a href={doi.href} style={style("doi")}>
             doi:{doi.bare}
           </a>
           .

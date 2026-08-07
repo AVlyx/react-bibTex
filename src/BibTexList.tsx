@@ -1,4 +1,4 @@
-import { CSSProperties, Fragment, type ReactNode } from "react";
+import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { BibTex } from "./BibTex";
 import { parseAll, type BibEntry } from "./parse";
 import { type BibTexStyles } from "./styles";
