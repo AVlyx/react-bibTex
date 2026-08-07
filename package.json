@@ -1,6 +1,24 @@
 {
   "name": "react-bibtex",
   "version": "0.1.0",
+  "description": "Render BibTeX entries as React elements, with the LaTeX decoded and every fragment styleable.",
+  "keywords": [
+    "bibtex",
+    "react",
+    "citation",
+    "bibliography",
+    "latex",
+    "references",
+    "parser"
+  ],
+  "homepage": "https://avlyx.github.io/react-bibTex/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AVlyx/react-bibTex.git"
+  },
+  "bugs": "https://github.com/AVlyx/react-bibTex/issues",
+  "license": "MIT",
+  "author": "AVlyx",
   "type": "module",
   "files": [
     "dist"
