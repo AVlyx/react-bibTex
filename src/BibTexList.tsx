@@ -1,7 +1,7 @@
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { BibTex } from "./BibTex";
-import { parseAll, type BibEntry } from "./parse";
-import { type BibTexStyles } from "./styles";
+import { parseBibTexList, type BibEntry } from "./parse";
+import { type BibTexStyles, type StyleMode } from "./styles";
 
 export interface BibTexListProps {
   /** BibTeX source holding any number of entries. */
@@ -17,6 +17,8 @@ export interface BibTexListProps {
   separator?: ReactNode;
   /** Per-slot style overrides, merged over the defaults. */
   styles?: BibTexStyles;
+  /** How `styles` combines with the defaults, per slot. Default `"merge"`. */
+  styleMode?: StyleMode;
   listStyle?: CSSProperties;
 }
 
@@ -26,11 +28,12 @@ export function BibTexList({
   numbered = true,
   separator = <br />,
   styles,
+  styleMode,
   listStyle,
 }: BibTexListProps) {
   let entries: BibEntry[];
   try {
-    entries = parseAll(children);
+    entries = parseBibTexList(children);
   } catch (error) {
     return (
       <p style={listStyle}>
@@ -53,6 +56,7 @@ export function BibTexList({
               id={`ref-${anchor}`}
               refs={numbered ? [{ n, link: `#cite-${anchor}` }] : undefined}
               styles={styles}
+              styleMode={styleMode}
             />
           </Fragment>
         );

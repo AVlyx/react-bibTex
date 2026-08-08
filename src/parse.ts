@@ -1,11 +1,11 @@
 export interface BibEntry {
-  type: string; //does not do anything
-  key: string; //does not do anything
-  fields: Record<string, string>; //only relevant field
+  type: string;
+  key: string;
+  fields: Record<string, string>;
 }
 
 /** Abbreviations usable as bare values, defined by `@string` or built in. */
-export type BibTexMacros = Record<string, string>;
+type BibTexMacros = Record<string, string>;
 
 /** BibTeX predefines these; a `.bib` file may still override them with `@string`. */
 const builtinMacros: BibTexMacros = {
@@ -64,7 +64,7 @@ type Block =
   | { kind: "macro"; name: string; value: string }
   | { kind: "ignored" };
 
-export function parse(
+function parse(
   bibtex: string,
   iStart: number = 0,
   macros: BibTexMacros = {},
@@ -286,7 +286,11 @@ export function parse(
   }
 }
 
-export function parseAll(bibtex: string): BibEntry[] {
+export function parseBibTex(bibtex: string): BibEntry {
+  return parse(bibtex).bibEntry;
+}
+
+export function parseBibTexList(bibtex: string): BibEntry[] {
   const entries: BibEntry[] = [];
   let macros: BibTexMacros = {};
 

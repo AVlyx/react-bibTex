@@ -50,6 +50,7 @@ import { BibTexList } from "react-bibtex";
 | `numbered` | `boolean` | `true` | Render the citation markers |
 | `separator` | `ReactNode` | `<br />` | Placed between entries |
 | `styles` | `BibTexStyles` | — | Per-slot overrides, merged over the defaults |
+| `styleMode` | `"merge" \| "replace"` | `"merge"` | Whether an override layers over its default or takes its place |
 | `listStyle` | `CSSProperties` | — | Style for the wrapping element |
 
 ### `<BibTex>`
@@ -71,6 +72,7 @@ import { BibTex } from "react-bibtex";
 | `id` | `string` | `id` for the wrapping element |
 | `refs` | `{ n: number \| string; link: string }[]` | Superscript markers linking back to the citation sites |
 | `styles` | `BibTexStyles` | Per-slot overrides |
+| `styleMode` | `"merge" \| "replace"` | How overrides combine with the defaults. Default `"merge"` |
 
 Neither component throws on bad input. A parse failure renders the error message in place —
 `<BibTex>` uses `role="alert"` — so one broken entry cannot take a page down.
@@ -91,16 +93,42 @@ they are merged over the defaults, so partial overrides are fine.
 </BibTexList>
 ```
 
-| slot | element | default |
+| slot | covers | default |
 | --- | --- | --- |
-| `entry` | `<span>` around the whole citation | — |
-| `marker` | `<sup>` citation number | — |
+| `entry` | the whole citation | — |
+| `marker` | citation number | `vertical-align: super; font-size: smaller` |
 | `author` | author list | — |
-| `title` | `<em>` | `font-style: italic` |
-| `journal` | `<strong>` | `font-weight: 700` |
+| `title` | title | `font-style: italic` |
+| `journal` | journal name | `font-weight: 700` |
 | `volume` | volume and number | — |
 | `year` | year | — |
 | `doi` | DOI link | `color: #1a73e8; text-decoration: none` |
+
+Every slot renders as a plain `<span>` — there is no `<sup>`, `<em>` or `<strong>` in the output,
+so the superscript, italics and bold above come from `defaultStyles` and nothing else. The table
+is the whole visual contract: what you read there is what renders, and setting a slot to `{}`
+strips its look completely, with no tag defaults left underneath to surprise you. The only
+elements that are not spans are the `<a>` for a marker and for the DOI, which link rather than
+style.
+
+### `styleMode`
+
+By default an override is layered **over** its default, so a partial override keeps the rest.
+`styleMode="replace"` takes your object verbatim instead, which is how you drop a default rather
+than restate it:
+
+```tsx
+// merge (default): italic survives, colour is added
+<BibTexList styles={{ title: { color: "#b00" } }}>{bibSource}</BibTexList>
+
+// replace: the title is red and upright, the italic default is gone
+<BibTexList styleMode="replace" styles={{ title: { color: "#b00" } }}>{bibSource}</BibTexList>
+```
+
+Either way this is decided **per slot**. A slot you say nothing about keeps its default under both
+modes — `replace` above still leaves `journal` bold and the DOI blue. To strip a single slot,
+give it an empty object: `styles={{ marker: {} }}` with `styleMode="replace"` renders the citation
+number inline instead of superscripted.
 
 The wrapping element carries `data-type` (the entry type), so you can also reach entries from a
 stylesheet: `[data-type="book"] { … }`.
@@ -111,23 +139,22 @@ fields are parsed and available through the parser, but not shown.
 ## Parsing on its own
 
 ```tsx
-import { parse, parseAll } from "react-bibtex";
+import { parseBibTex, parseBibTexList } from "react-bibtex";
 
-const entries = parseAll(source);
+const entries = parseBibTexList(source);
 // [{ type: "article", key: "erdos1959", fields: { author: "…", title: "…" } }]
 
-const { bibEntry, iEnd, macros } = parse(source);
+const entry = parseBibTex(source);
+// { type: "article", key: "erdos1959", fields: { author: "…", title: "…" } }
 ```
 
-- **`parseAll(source)`** → every entry in the source.
-- **`parse(source, iStart?, macros?)`** → the first entry at or after `iStart`, the index just
-  past it, and the macro table in force. Pass `macros` back in to keep `@string` definitions
-  across calls.
+- **`parseBibTexList(source)`** → every entry in the source, as a `BibEntry[]`.
+- **`parseBibTex(source)`** → the first entry in the source, as a single `BibEntry`.
 
 Entry types and field names are lower-cased; values are kept as written. A malformed entry throws
 `BibTexParseError`, which carries a `position` in the source. A source with no entries at all
-throws `BibTexNoEntryError`, a subclass of it — `parseAll` treats that as an empty result rather
-than an error.
+throws `BibTexNoEntryError`, a subclass of it — `parseBibTexList` treats that as an empty result
+rather than an error.
 
 ## What of BibTeX is understood
 
@@ -172,9 +199,9 @@ citation-style engine here — if you need APA or MLA output, you want
 
 ## Exports
 
-`BibTex`, `BibTexList`, `parse`, `parseAll`, `latexToText`, `defaultStyles`, `styleFor`,
+`BibTex`, `BibTexList`, `parseBibTex`, `parseBibTexList`, `latexToText`, `defaultStyles`,
 `BibTexParseError`, `BibTexNoEntryError`, and the types `BibTexProps`, `BibTexListProps`,
-`BibEntry`, `BibTexMacros`, `BibTexSlot`, `BibTexStyles`.
+`BibEntry`, `BibTexSlot`, `BibTexStyles`, `StyleMode`.
 
 ## Development
 

@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { BibTex, latexToText, parseAll } from "../dist/index.js";
+import { BibTex, latexToText, parseBibTexList } from "../dist/index.js";
 
-const fields = (src) => parseAll(src).map((entry) => entry.fields);
+const fields = (src) => parseBibTexList(src).map((entry) => entry.fields);
 
 test("% comments", async (t) => {
   await t.test("a comment line between fields", () => {
@@ -11,7 +11,7 @@ test("% comments", async (t) => {
   });
 
   await t.test("an @ inside a comment does not start an entry", () => {
-    assert.equal(parseAll("% see @foo\n@article{a,title={T}}")[0].type, "article");
+    assert.equal(parseBibTexList("% see @foo\n@article{a,title={T}}")[0].type, "article");
   });
 
   await t.test("a comment between the field name and its value", () => {
@@ -55,19 +55,22 @@ test("@string, @preamble and @comment", async (t) => {
   });
 
   await t.test("@preamble is skipped", () => {
-    assert.equal(parseAll('@preamble{"\\newcommand{\\x}{y}"}\n@article{a,title={T}}').length, 1);
+    assert.equal(
+      parseBibTexList('@preamble{"\\newcommand{\\x}{y}"}\n@article{a,title={T}}').length,
+      1,
+    );
   });
 
   await t.test("@comment is skipped", () => {
-    assert.equal(parseAll("@comment{jabref-meta: {x}}\n@article{a,title={T}}").length, 1);
+    assert.equal(parseBibTexList("@comment{jabref-meta: {x}}\n@article{a,title={T}}").length, 1);
   });
 
   await t.test("a file of only macros yields no entries", () => {
-    assert.deepEqual(parseAll('@string{nat="Nature"}'), []);
+    assert.deepEqual(parseBibTexList('@string{nat="Nature"}'), []);
   });
 
   await t.test("a malformed entry still throws", () => {
-    assert.throws(() => parseAll("@article{a, title={unterminated"), {
+    assert.throws(() => parseBibTexList("@article{a, title={unterminated"), {
       name: "BibTexParseError",
     });
   });
@@ -117,10 +120,66 @@ test("BibTex renders a decoded citation line", () => {
     if (Array.isArray(node)) return node.forEach(walk);
     if (typeof node === "string" || typeof node === "number") return void text.push(String(node));
     if (node && node.props) walk(node.props.children);
-  })(BibTex({ entry: parseAll(src)[0] }));
+  })(BibTex({ entry: parseBibTexList(src)[0] }));
 
   assert.equal(
     text.join(""),
     "Erdős, P.. On NP problems. Nature. vol. 3(2). (1959). doi:10.1000/xyz.",
   );
+});
+
+test("styleMode", async (t) => {
+  const entry = parseBibTexList("@article{a, title={T}, journal={J}}")[0];
+
+  /** Collects the inline style of each slot-bearing element, keyed by its text. */
+  const stylesOf = (props) => {
+    const found = [];
+    (function walk(node) {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!node || !node.props) return;
+      if (node.props.style) found.push(node.props.style);
+      walk(node.props.children);
+    })(BibTex({ entry, ...props }));
+    return found;
+  };
+
+  const has = (list, style) => list.some((s) => Object.entries(style).every(([k, v]) => s[k] === v));
+
+  await t.test("defaults apply with no styles prop", () => {
+    const styles = stylesOf({});
+    assert.ok(has(styles, { fontStyle: "italic" }), "title keeps its italic default");
+    assert.ok(has(styles, { fontWeight: 700 }), "journal keeps its bold default");
+  });
+
+  await t.test("merge layers the override over the default", () => {
+    const styles = stylesOf({ styles: { title: { color: "red" } } });
+    assert.ok(
+      has(styles, { color: "red", fontStyle: "italic" }),
+      "title gains the colour and keeps the default italic",
+    );
+  });
+
+  await t.test("replace takes the override verbatim", () => {
+    const styles = stylesOf({ styles: { title: { color: "red" } }, styleMode: "replace" });
+    assert.ok(has(styles, { color: "red" }), "title takes the colour");
+    assert.ok(
+      !styles.some((s) => s.color === "red" && s.fontStyle === "italic"),
+      "title drops the default italic",
+    );
+  });
+
+  await t.test("replace leaves slots without an override untouched", () => {
+    const styles = stylesOf({ styles: { title: { color: "red" } }, styleMode: "replace" });
+    assert.ok(has(styles, { fontWeight: 700 }), "journal keeps its bold default");
+  });
+
+  await t.test("an empty override strips a slot under replace", () => {
+    const styles = stylesOf({ styles: { title: {} }, styleMode: "replace" });
+    assert.ok(!has(styles, { fontStyle: "italic" }), "the default italic is gone");
+  });
+
+  await t.test("an empty override changes nothing under merge", () => {
+    const styles = stylesOf({ styles: { title: {} } });
+    assert.ok(has(styles, { fontStyle: "italic" }), "the default italic survives");
+  });
 });

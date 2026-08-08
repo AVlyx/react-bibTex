@@ -1,7 +1,7 @@
 import { Fragment } from "react";
 import { latexToText } from "./latex";
-import { type BibEntry, parse } from "./parse";
-import { type BibTexSlot, type BibTexStyles, styleFor } from "./styles";
+import { type BibEntry, parseBibTex } from "./parse";
+import { type BibTexSlot, type BibTexStyles, type StyleMode, styleFor } from "./styles";
 
 interface BibTexCommon {
   id?: string;
@@ -12,6 +12,8 @@ interface BibTexCommon {
     link: string;
   }[];
   styles?: BibTexStyles;
+  /** How `styles` combines with the defaults, per slot. Default `"merge"`. */
+  styleMode?: StyleMode;
 }
 
 export type BibTexProps = BibTexCommon &
@@ -23,12 +25,19 @@ const doiParts = (doi: string) => {
   return { bare, href: `https://doi.org/${bare}` };
 };
 
-export function BibTex({ children, entry: parsed, refs, id, styles }: BibTexProps) {
-  const style = (slot: BibTexSlot) => styleFor(slot, styles);
+export function BibTex({
+  children,
+  entry: parsed,
+  refs,
+  id,
+  styles,
+  styleMode = "merge",
+}: BibTexProps) {
+  const style = (slot: BibTexSlot) => styleFor(slot, styles, styleMode);
 
   let entry: BibEntry;
   try {
-    entry = parsed ?? parse(children ?? "").bibEntry;
+    entry = parsed ?? parseBibTex(children ?? "");
   } catch (error) {
     return (
       <span role="alert" style={style("entry")}>
@@ -46,20 +55,20 @@ export function BibTex({ children, entry: parsed, refs, id, styles }: BibTexProp
     <span id={id} style={style("entry")} data-type={type}>
       {refs?.map(({ n, link }) => (
         <Fragment key={link}>
-          <sup style={style("marker")}>
+          <span style={style("marker")}>
             <a href={link}>{n}</a>
-          </sup>{" "}
+          </span>{" "}
         </Fragment>
       ))}
       {fields.author && <span style={style("author")}>{text(fields.author)}. </span>}
       {fields.title && (
         <>
-          <em style={style("title")}>{text(fields.title)}</em>.{" "}
+          <span style={style("title")}>{text(fields.title)}</span>.{" "}
         </>
       )}
       {fields.journal && (
         <>
-          <strong style={style("journal")}>{text(fields.journal)}</strong>.{" "}
+          <span style={style("journal")}>{text(fields.journal)}</span>.{" "}
         </>
       )}
       {fields.volume && (

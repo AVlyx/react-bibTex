@@ -12,7 +12,7 @@ export type BibTexSlot =
 
 export const defaultStyles: Record<BibTexSlot, CSSProperties> = {
   entry: {},
-  marker: {},
+  marker: { verticalAlign: "super", fontSize: "smaller" },
   author: {},
   title: { fontStyle: "italic" },
   journal: { fontWeight: 700 },
@@ -23,7 +23,21 @@ export const defaultStyles: Record<BibTexSlot, CSSProperties> = {
 
 export type BibTexStyles = Partial<Record<BibTexSlot, CSSProperties>>;
 
-export const styleFor = (slot: BibTexSlot, styles?: BibTexStyles): CSSProperties => ({
-  ...defaultStyles[slot],
-  ...styles?.[slot],
-});
+/**
+ * How a slot's override combines with its default. `merge` layers the override
+ * on top, so partial overrides keep the rest of the default; `replace` takes the
+ * override verbatim, which is the way to drop a default rather than restate it.
+ *
+ * Either way this is per slot: a slot with no override keeps its default.
+ */
+export type StyleMode = "merge" | "replace";
+
+export const styleFor = (
+  slot: BibTexSlot,
+  styles?: BibTexStyles,
+  mode: StyleMode = "merge",
+): CSSProperties => {
+  const override = styles?.[slot];
+  if (!override) return defaultStyles[slot];
+  return mode === "replace" ? override : { ...defaultStyles[slot], ...override };
+};

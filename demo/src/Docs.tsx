@@ -138,18 +138,41 @@ export function Docs() {
           The slots are <code>entry</code>, <code>marker</code>, <code>author</code>,{" "}
           <code>title</code>, <code>journal</code>, <code>volume</code>, <code>year</code> and{" "}
           <code>doi</code> — the panel on the left drives exactly this prop. Only{" "}
-          <code>title</code>, <code>journal</code> and <code>doi</code> carry default styling.
+          <code>marker</code>, <code>title</code>, <code>journal</code> and <code>doi</code> carry
+          default styling; the placeholder in each box is that default.
+        </p>
+        <p>
+          By default an override is layered <em>over</em> its default, so a partial override keeps
+          the rest. <code>styleMode="replace"</code> takes your object verbatim instead — the way to
+          drop a default rather than restate it. It is decided per slot either way: a slot you leave
+          alone keeps its default under both modes, and an empty object strips one slot.
+        </p>
+        <Code>{`// merge (default): italic survives, colour is added
+<BibTexList styles={{ title: { color: "#b00" } }}>{source}</BibTexList>
+
+// replace: red and upright, the italic default is gone
+<BibTexList styleMode="replace" styles={{ title: { color: "#b00" } }}>{source}</BibTexList>`}</Code>
+        <p>
+          Every slot renders as a plain <code>&lt;span&gt;</code>. There is no{" "}
+          <code>&lt;sup&gt;</code>, <code>&lt;em&gt;</code> or <code>&lt;strong&gt;</code> in the
+          output — the superscript, italics and bold you see all come from{" "}
+          <code>defaultStyles</code>, which makes it the whole visual contract: clear a box back to
+          empty and you get the default, clear the default and the look is gone, with no tag styling
+          left underneath. Try <code>vertical-align: baseline</code> on <code>marker</code>, or{" "}
+          <code>font-style: normal</code> on <code>title</code>. The only non-spans are the{" "}
+          <code>&lt;a&gt;</code> in a marker and in the DOI, which link rather than style.
         </p>
       </Section>
 
       <Section title="Parsing on its own">
         <p>The parser is exported if you want the data rather than the markup.</p>
-        <Code>{`import { parse, parseAll } from "react-bibtex";
+        <Code>{`import { parseBibTex, parseBibTexList } from "react-bibtex";
 
-const entries = parseAll(source);
+const entries = parseBibTexList(source);
 // [{ type: "article", key: "erdos1959", fields: { author: "...", ... } }]
 
-const { bibEntry, iEnd, macros } = parse(source);`}</Code>
+const entry = parseBibTex(source);
+// { type: "article", key: "erdos1959", fields: { author: "...", ... } }`}</Code>
         <p>
           Field names are lower-cased; values are kept as written. A malformed entry throws{" "}
           <code>BibTexParseError</code>, which carries the <code>position</code> in the source. A

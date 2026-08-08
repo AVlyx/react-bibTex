@@ -1,5 +1,11 @@
 import { useMemo, useRef, useState, type CSSProperties, type DragEvent } from "react";
-import { BibTexList, defaultStyles, parseAll, type BibTexStyles } from "react-bibtex";
+import {
+  BibTexList,
+  defaultStyles,
+  parseBibTexList,
+  type BibTexStyles,
+  type StyleMode,
+} from "react-bibtex";
 
 import { Docs } from "./Docs";
 import { Splitter } from "./Splitter";
@@ -40,6 +46,7 @@ export function App() {
   const [slotCss, setSlotCss] = useState<Record<Slot, string>>(emptyCss);
   const [listCss, setListCss] = useState("line-height: 1.9");
   const [numbered, setNumbered] = useState(true);
+  const [styleMode, setStyleMode] = useState<StyleMode>("merge");
   const [dropping, setDropping] = useState(false);
 
   const layoutRef = useRef<HTMLDivElement>(null);
@@ -59,7 +66,7 @@ export function App() {
 
   const count = useMemo(() => {
     try {
-      return parseAll(source).length;
+      return parseBibTexList(source).length;
     } catch {
       return null;
     }
@@ -143,7 +150,8 @@ export function App() {
         <header className="panel__head">
           <h2>Styles</h2>
           <p>
-            CSS declarations per slot, merged over the defaults. Try{" "}
+            CSS declarations per slot,{" "}
+            {styleMode === "replace" ? "replacing the defaults" : "merged over the defaults"}. Try{" "}
             <code>color: crimson; font-variant: small-caps</code>.
           </p>
           <button type="button" className="ghost" onClick={() => setSlotCss(emptyCss)}>
@@ -194,6 +202,18 @@ export function App() {
               <code>numbered</code> — render the citation markers
             </span>
           </label>
+
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={styleMode === "replace"}
+              onChange={(event) => setStyleMode(event.target.checked ? "replace" : "merge")}
+            />
+            <span>
+              <code>styleMode="replace"</code> — a box you fill in replaces that slot's default
+              instead of layering over it. Slots you leave empty keep theirs either way.
+            </span>
+          </label>
         </div>
       </section>
 
@@ -205,7 +225,12 @@ export function App() {
 
         <div className="panel__body">
           <div className="result">
-            <BibTexList numbered={numbered} styles={styles} listStyle={listStyle}>
+            <BibTexList
+              numbered={numbered}
+              styles={styles}
+              styleMode={styleMode}
+              listStyle={listStyle}
+            >
               {source}
             </BibTexList>
           </div>

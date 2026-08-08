@@ -46,7 +46,7 @@
     "build": "tsup",
     "test": "npm run build && node --test \"test/**/*.test.mjs\"",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "npm run build"
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
