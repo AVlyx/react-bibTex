@@ -1,0 +1,36 @@
+name: Publish to npm
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# id-token lets npm verify this run via OIDC — that is what produces the
+# provenance attestation, and what trusted publishing authenticates against.
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm >= 11.5.1; pin forward rather than rely
+      # on whatever the runner image happens to ship.
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm test
+
+      # prepack rebuilds dist; no NODE_AUTH_TOKEN — the OIDC exchange covers auth.
+      - run: npm publish --access public
