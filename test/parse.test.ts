@@ -363,7 +363,7 @@ test("parseAtString", async (t) => {
   await t.test("reads a macro definition", () => {
     const src = '@string{nat = "Nature"}';
     assert.deepEqual(parseAtString(src, after(src)), [
-      { kind: "macro", macro: "nat", value: ["Nature"] },
+      { kind: "macro", macro: { macro: "nat", value: ["Nature"] } },
       23,
     ]);
   });
@@ -372,8 +372,7 @@ test("parseAtString", async (t) => {
     const src = "@string{nat={Nature}}";
     assert.deepEqual(parseAtString(src, after(src))[0], {
       kind: "macro",
-      macro: "nat",
-      value: ["Nature"],
+      macro: { macro: "nat", value: ["Nature"] },
     });
   });
 
@@ -381,8 +380,7 @@ test("parseAtString", async (t) => {
     const src = '@string{full = nat # " Physics"}';
     assert.deepEqual(parseAtString(src, after(src))[0], {
       kind: "macro",
-      macro: "full",
-      value: [{ macro: "nat" }, " Physics"],
+      macro: { macro: "full", value: [{ macro: "nat" }, " Physics"] },
     });
   });
 
@@ -394,13 +392,13 @@ test("parseAtString", async (t) => {
   await t.test("folds the macro name to lower case", () => {
     const src = '@string{NAT = "Nature"}';
     const [block] = parseAtString(src, after(src));
-    assert.equal(block.kind === "macro" && block.macro, "nat");
+    assert.equal(block.kind === "macro" && block.macro.macro, "nat");
   });
 
   await t.test("closes on a paren when told to", () => {
     const src = '@string(nat = "Nature")';
     assert.deepEqual(parseAtString(src, src.indexOf("(") + 1, ")"), [
-      { kind: "macro", macro: "nat", value: ["Nature"] },
+      { kind: "macro", macro: { macro: "nat", value: ["Nature"] } },
       23,
     ]);
   });
@@ -511,7 +509,7 @@ test("parseBlock", async (t) => {
 
   await t.test("reads a @string block", () => {
     const [block] = parseBlock('@string{n="N"}', 1);
-    assert.deepEqual(block, { kind: "macro", macro: "n", value: ["N"] });
+    assert.deepEqual(block, { kind: "macro", macro: { macro: "n", value: ["N"] } });
   });
 
   await t.test("recognises @string whatever its case", () => {
@@ -571,6 +569,6 @@ test("parseBlock", async (t) => {
 
   await t.test("reads a paren-delimited @string", () => {
     const [block] = parseBlock('@string(n="N")', 1);
-    assert.deepEqual(block, { kind: "macro", macro: "n", value: ["N"] });
+    assert.deepEqual(block, { kind: "macro", macro: { macro: "n", value: ["N"] } });
   });
 });

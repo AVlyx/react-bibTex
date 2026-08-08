@@ -4,25 +4,6 @@ export interface BibEntry {
   fields: Record<string, string>;
 }
 
-/** Abbreviations usable as bare values, defined by `@string` or built in. */
-export type BibTexMacros = Record<string, string>;
-
-/** BibTeX predefines these; a `.bib` file may still override them with `@string`. */
-export const builtinMacros: BibTexMacros = {
-  jan: "January",
-  feb: "February",
-  mar: "March",
-  apr: "April",
-  may: "May",
-  jun: "June",
-  jul: "July",
-  aug: "August",
-  sep: "September",
-  oct: "October",
-  nov: "November",
-  dec: "December",
-};
-
 export class BibTexParseError extends Error {
   readonly position: number;
 
@@ -227,9 +208,13 @@ export interface Entries {
   key: string;
   fields: Record<string, Text>;
 }
+export interface MacroDef {
+  macro: string;
+  value: Text;
+}
 export type Block =
   | { kind: "entry"; entry: Entries }
-  | { kind: "macro"; macro: string; value: Text }
+  | { kind: "macro"; macro: MacroDef }
   | { kind: "ignored" };
 
 /**
@@ -249,7 +234,7 @@ export function parseField(bibtex: string, i: number): [string, Text, number] {
 export function parseAtString(bibtex: string, i: number, close = "}"): [Block, number] {
   const [macro, value, iEnd] = parseField(bibtex, i);
   i = expect(bibtex, iEnd, close);
-  return [{ kind: "macro", macro, value }, i];
+  return [{ kind: "macro", macro: { macro, value } }, i];
 }
 
 /**
@@ -346,31 +331,3 @@ export function parseBlock(bibtex: string, i: number): [Block, number] {
       return parseBlockWithId(bibtex, i, cmd, close);
   }
 }
-
-// export function parseBibTex(bibtex: string): BibEntry {
-//   return parse(bibtex).bibEntry;
-// }
-
-// export function parseBibTexList(bibtex: string): BibEntry[] {
-//   const entries: BibEntry[] = [];
-//   let macros: BibTexMacros = {};
-
-//   let i = findNextBlock(bibtex, 0);
-//   while (i !== -1) {
-//     // Blocks that are not entries (a trailing `@string`, say) leave nothing to
-//     // collect, which is not an error. Malformed entries still throw.
-//     let result;
-//     try {
-//       result = parse(bibtex, i, macros);
-//     } catch (error) {
-//       if (error instanceof BibTexNoEntryError) break;
-//       throw error;
-//     }
-
-//     entries.push(result.bibEntry);
-//     macros = result.macros;
-//     i = findNextBlock(bibtex, result.iEnd);
-//   }
-
-//   return entries;
-// }

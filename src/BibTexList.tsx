@@ -1,6 +1,7 @@
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import { BibTex } from "./BibTex";
-import { parseBibTexList, type BibEntry } from "./parse";
+import { parseBibTexList } from "./semantic";
+import { type BibEntry } from "./parse";
 import { type BibTexStyles, type StyleMode } from "./styles";
 
 export interface BibTexListProps {

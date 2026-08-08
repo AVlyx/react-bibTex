@@ -44,7 +44,8 @@
   },
   "scripts": {
     "build": "tsup",
-    "test": "npm run build && node --test \"test/**/*.test.mjs\"",
+    "test": "npm run build && node --test test/index.test.mjs test/parse.test.ts test/semantic.test.ts",
+    "test:unit": "node --test test/parse.test.ts test/semantic.test.ts",
     "typecheck": "tsc --noEmit",
     "prepack": "npm run build"
   },

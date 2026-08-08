@@ -1,6 +1,6 @@
 import { Fragment } from "react";
-import { latexToText } from "./latex";
-import { type BibEntry, parseBibTex } from "./parse";
+import { parseBibTex } from "./semantic";
+import { type BibEntry } from "./parse";
 import { type BibTexSlot, type BibTexStyles, type StyleMode, styleFor } from "./styles";
 
 interface BibTexCommon {
@@ -47,9 +47,9 @@ export function BibTex({
   }
 
   const { type, fields } = entry;
+  // Fields arrive decoded, so they go straight in. Decoding twice would read
+  // the braces that `\{` left behind as grouping.
   const doi = fields.doi ? doiParts(fields.doi) : undefined;
-  // The DOI is deliberately left raw: it is an identifier, not prose.
-  const text = (field: string) => (field ? latexToText(field) : field);
 
   return (
     <span id={id} style={style("entry")} data-type={type}>
@@ -60,24 +60,24 @@ export function BibTex({
           </span>{" "}
         </Fragment>
       ))}
-      {fields.author && <span style={style("author")}>{text(fields.author)}. </span>}
+      {fields.author && <span style={style("author")}>{fields.author}. </span>}
       {fields.title && (
         <>
-          <span style={style("title")}>{text(fields.title)}</span>.{" "}
+          <span style={style("title")}>{fields.title}</span>.{" "}
         </>
       )}
       {fields.journal && (
         <>
-          <span style={style("journal")}>{text(fields.journal)}</span>.{" "}
+          <span style={style("journal")}>{fields.journal}</span>.{" "}
         </>
       )}
       {fields.volume && (
         <span style={style("volume")}>
-          vol. {text(fields.volume)}
-          {fields.number && `(${text(fields.number)})`}.{" "}
+          vol. {fields.volume}
+          {fields.number && `(${fields.number})`}.{" "}
         </span>
       )}
-      {fields.year && <span style={style("year")}>({text(fields.year)}). </span>}
+      {fields.year && <span style={style("year")}>({fields.year}). </span>}
       {doi && (
         <>
           <a href={doi.href} style={style("doi")}>
