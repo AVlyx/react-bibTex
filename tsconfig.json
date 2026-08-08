@@ -15,9 +15,13 @@
     "declaration": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
+    // Tests import `../src/parse.ts` so node can run them without a build.
+    "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "types": ["node"]
   },
-  "include": ["src"]
+
+  "include": ["src", "test"]
 }
