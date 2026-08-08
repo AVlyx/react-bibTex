@@ -161,7 +161,7 @@ export function parseLatex(bibtex: string, i: number): [Latex, number] {
       command += bibtex[i];
       i++;
     }
-    i = skipWhitespace(bibtex, i);
+    while (i < bibtex.length && /\s/.test(bibtex[i])) i++;
   } else {
     command = bibtex[i];
     i++;
@@ -174,10 +174,6 @@ export function parseLatex(bibtex: string, i: number): [Latex, number] {
   return [{ command }, i];
 }
 
-/**
- * A field value: `{...}`, `"..."` or a bare name, any number of them joined by
- * `#`. Stops on the `,` or `}` that ends the field, without consuming it.
- */
 export function parseValue(bibtex: string, i: number): [Text, number] {
   const vals: Text = [];
   while (true) {
@@ -199,7 +195,7 @@ export function parseValue(bibtex: string, i: number): [Text, number] {
       i++;
       continue;
     }
-    if (["}", ","].includes(bibtex[i])) return [vals, i];
+    if (["}", ")", ","].includes(bibtex[i])) return [vals, i];
     fail(`unexpected token ${at(bibtex, i)}`, i);
   }
 }
@@ -236,23 +232,65 @@ export type Block =
   | { kind: "macro"; macro: string; value: Text }
   | { kind: "ignored" };
 
+/**
+ * A `name = value` pair. Field and macro names are case-insensitive in BibTeX,
+ * so the name comes back folded and `Title` cannot shadow `title`.
+ */
 export function parseField(bibtex: string, i: number): [string, Text, number] {
   i = skipWhitespace(bibtex, i);
   const [variable, iToken] = parseToken(bibtex, i);
   if (variable === "") fail(`expected a field name, found ${at(bibtex, i)}`, i);
   i = expect(bibtex, iToken, "=");
   const [value, iEnd] = parseValue(bibtex, i);
-  return [variable, value, iEnd];
+  return [variable.toLowerCase(), value, iEnd];
 }
 
 //at meaning @, so parse @string
-export function parseAtString(bibtex: string, i: number): [Block, number] {
+export function parseAtString(bibtex: string, i: number, close = "}"): [Block, number] {
   const [macro, value, iEnd] = parseField(bibtex, i);
-  i = expect(bibtex, iEnd, "}");
+  i = expect(bibtex, iEnd, close);
   return [{ kind: "macro", macro, value }, i];
 }
 
-export function parseBlockWithId(bibtex: string, i: number, type: string): [Block, number] {
+/**
+ * Skips a body we do not interpret — `@comment`, `@preamble` — ending just
+ * past its closing delimiter. Braces nest, and a backslash hides whatever
+ * follows it.
+ */
+function skipBlockBody(bibtex: string, i: number, close: string): number {
+  let depth = 0;
+  while (i < bibtex.length) {
+    const char = bibtex[i];
+    if (char === "\\") {
+      i += 2;
+      continue;
+    }
+    if (char === "{") {
+      depth++;
+      i++;
+      continue;
+    }
+    if (char === "}") {
+      if (depth === 0) {
+        if (close === "}") return i + 1;
+        fail("unexpected '}'", i);
+      }
+      depth--;
+      i++;
+      continue;
+    }
+    if (char === close && depth === 0) return i + 1;
+    i++;
+  }
+  fail(`expected ${close}`, i);
+}
+
+export function parseBlockWithId(
+  bibtex: string,
+  i: number,
+  type: string,
+  close = "}",
+): [Block, number] {
   i = skipWhitespace(bibtex, i);
   const [key, iKey] = parseToken(bibtex, i);
   if (key === "") fail(`expected an entry key, found ${at(bibtex, i)}`, i);
@@ -264,13 +302,13 @@ export function parseBlockWithId(bibtex: string, i: number, type: string): [Bloc
     iEnd,
   ];
 
-  if (bibtex[i] == "}") return entry(i + 1);
+  if (bibtex[i] == close) return entry(i + 1);
   i = expect(bibtex, i, ",");
 
   while (i < bibtex.length) {
     i = skipWhitespace(bibtex, i);
-    // A comma after the last field is allowed, so a `}` can turn up here too.
-    if (bibtex[i] == "}") return entry(i + 1);
+    // A comma after the last field is allowed, so the closer can turn up here.
+    if (bibtex[i] == close) return entry(i + 1);
 
     const [variable, value, iEnd] = parseField(bibtex, i);
     fields[variable] = value;
@@ -279,23 +317,33 @@ export function parseBlockWithId(bibtex: string, i: number, type: string): [Bloc
       i++;
       continue;
     }
-    if (bibtex[i] == "}") return entry(i + 1);
-    fail(`expected , or }, found ${at(bibtex, i)}`, i);
+    if (bibtex[i] == close) return entry(i + 1);
+    fail(`expected , or ${close}, found ${at(bibtex, i)}`, i);
   }
   fail(`Could not find end of block`, i);
 }
 
-/** A whole block, with `i` just past its `@`. */
+/** A whole block, with `i` just past its `@`. Braces or parens may delimit it. */
 export function parseBlock(bibtex: string, i: number): [Block, number] {
   i = skipWhitespace(bibtex, i);
   const [cmd, iCmd] = parseToken(bibtex, i);
   if (cmd === "") fail(`expected a block type, found ${at(bibtex, i)}`, i);
   i = skipWhitespace(bibtex, iCmd);
-  i = expect(bibtex, i, "{");
-  if (cmd.toLowerCase() == "string") {
-    return parseAtString(bibtex, i);
-  } else {
-    return parseBlockWithId(bibtex, i, cmd);
+
+  const open = bibtex[i];
+  if (open !== "{" && open !== "(") fail(`expected { or (, found ${at(bibtex, i)}`, i);
+  const close = open === "{" ? "}" : ")";
+  i = skipWhitespace(bibtex, i + 1);
+
+  switch (cmd.toLowerCase()) {
+    case "string":
+      return parseAtString(bibtex, i, close);
+    // Neither holds a bibliography entry, so the body needs no interpreting.
+    case "comment":
+    case "preamble":
+      return [{ kind: "ignored" }, skipBlockBody(bibtex, i, close)];
+    default:
+      return parseBlockWithId(bibtex, i, cmd, close);
   }
 }
 

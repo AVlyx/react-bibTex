@@ -166,6 +166,13 @@ test("parseInnerLatex", async (t) => {
   await t.test("throws when the delimiter never arrives", () => {
     throwsAt(() => parseInnerLatex("{abc", 1, "}"), 4);
   });
+
+  await t.test("a % after a command stays part of the value", () => {
+    assert.deepEqual(parseInnerLatex("{\\LaTeX% off}", 1, "}"), [
+      [{ command: "LaTeX" }, "% off"],
+      13,
+    ]);
+  });
 });
 
 test("parseLatex", async (t) => {
@@ -179,6 +186,10 @@ test("parseLatex", async (t) => {
 
   await t.test("swallows a newline after a command name", () => {
     assert.deepEqual(parseLatex("\\LaTeX\n x", 1), [{ command: "LaTeX" }, 8]);
+  });
+
+  await t.test("leaves a % after a command name alone, it is value text", () => {
+    assert.deepEqual(parseLatex("\\LaTeX% x", 1), [{ command: "LaTeX" }, 6]);
   });
 
   await t.test("stops at a brace and takes the argument", () => {
@@ -258,6 +269,14 @@ test("parseValue", async (t) => {
   await t.test("throws at end of input", () => {
     throwsAt(() => parseValue("", 0), 0);
   });
+
+  await t.test("stops on the paren that closes a paren-delimited entry", () => {
+    assert.deepEqual(parseValue("{T})", 0), [["T"], 3]);
+  });
+
+  await t.test("a bare value stops on a paren too", () => {
+    assert.deepEqual(parseValue("nat)", 0), [[{ macro: "nat" }], 3]);
+  });
 });
 
 test("parseComment", async (t) => {
@@ -328,6 +347,14 @@ test("parseField", async (t) => {
   await t.test("throws when the name is missing", () => {
     throwsAt(() => parseField("= {T},", 0), 0);
   });
+
+  await t.test("folds the name to lower case", () => {
+    assert.deepEqual(parseField("Title = {T},", 0), ["title", ["T"], 11]);
+  });
+
+  await t.test("stops on a closing paren", () => {
+    assert.deepEqual(parseField("title={T})", 0), ["title", ["T"], 9]);
+  });
 });
 
 test("parseAtString", async (t) => {
@@ -362,6 +389,20 @@ test("parseAtString", async (t) => {
   await t.test("throws when the closing brace is missing", () => {
     const src = '@string{nat = "Nature"';
     throwsAt(() => parseAtString(src, after(src)), 22);
+  });
+
+  await t.test("folds the macro name to lower case", () => {
+    const src = '@string{NAT = "Nature"}';
+    const [block] = parseAtString(src, after(src));
+    assert.equal(block.kind === "macro" && block.macro, "nat");
+  });
+
+  await t.test("closes on a paren when told to", () => {
+    const src = '@string(nat = "Nature")';
+    assert.deepEqual(parseAtString(src, src.indexOf("(") + 1, ")"), [
+      { kind: "macro", macro: "nat", value: ["Nature"] },
+      23,
+    ]);
   });
 });
 
@@ -434,6 +475,25 @@ test("parseBlockWithId", async (t) => {
     const src = "@misc{k,a={1}";
     throwsAt(() => parseBlockWithId(src, after(src), "misc"), 13);
   });
+
+  await t.test("field names that differ only in case are one field", () => {
+    const src = "@misc{k,Title={1},title={2}}";
+    const [block] = parseBlockWithId(src, after(src), "misc");
+    assert.deepEqual(block.kind === "entry" && block.entry.fields, { title: ["2"] });
+  });
+
+  await t.test("closes on a paren when told to", () => {
+    const src = "@misc(k,a={1})";
+    assert.deepEqual(parseBlockWithId(src, src.indexOf("(") + 1, "misc", ")"), [
+      { kind: "entry", entry: { type: "misc", key: "k", fields: { a: ["1"] } } },
+      14,
+    ]);
+  });
+
+  await t.test("a brace does not close a paren-delimited entry", () => {
+    const src = "@misc(k,a={1}}";
+    throwsAt(() => parseBlockWithId(src, src.indexOf("(") + 1, "misc", ")"), 13);
+  });
 });
 
 test("parseBlock", async (t) => {
@@ -470,5 +530,47 @@ test("parseBlock", async (t) => {
 
   await t.test("throws when the opening brace is missing", () => {
     throwsAt(() => parseBlock("@article a,", 1), 9);
+  });
+
+  await t.test("@comment is skipped whole", () => {
+    const src = "@comment{jabref-meta: groupsversion:3;}";
+    assert.deepEqual(parseBlock(src, 1), [{ kind: "ignored" }, src.length]);
+  });
+
+  await t.test("@preamble is skipped whole", () => {
+    const src = '@preamble{"\\newcommand{\\x}{y}"}';
+    assert.deepEqual(parseBlock(src, 1), [{ kind: "ignored" }, src.length]);
+  });
+
+  await t.test("a skipped body may nest braces", () => {
+    const src = "@comment{a {b {c}} d}";
+    assert.deepEqual(parseBlock(src, 1), [{ kind: "ignored" }, src.length]);
+  });
+
+  await t.test("a skipped body ends where the entry after it begins", () => {
+    const src = "@comment{x}@article{a,title={T}}";
+    assert.equal(parseBlock(src, 1)[1], 11);
+  });
+
+  await t.test("@comment is recognised whatever its case", () => {
+    assert.equal(parseBlock("@COMMENT{x}", 1)[0].kind, "ignored");
+  });
+
+  await t.test("throws when a skipped body is never closed", () => {
+    const src = "@comment{x";
+    throwsAt(() => parseBlock(src, 1), 10);
+  });
+
+  await t.test("reads a paren-delimited entry", () => {
+    const [block] = parseBlock("@misc(k,a={1})", 1);
+    assert.deepEqual(block, {
+      kind: "entry",
+      entry: { type: "misc", key: "k", fields: { a: ["1"] } },
+    });
+  });
+
+  await t.test("reads a paren-delimited @string", () => {
+    const [block] = parseBlock('@string(n="N")', 1);
+    assert.deepEqual(block, { kind: "macro", macro: "n", value: ["N"] });
   });
 });
