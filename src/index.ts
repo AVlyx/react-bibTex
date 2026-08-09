@@ -7,7 +7,7 @@ export type { BibTexListProps } from "./BibTexList";
 export { BibTexParseError, BibTexNoEntryError } from "./parse";
 export type { BibEntry } from "./parse";
 
-export { parseBibTex, parseBibTexList, latexToText } from "./semantic";
+export { parseBibTex, parseBibTexList } from "./semantic";
 
 export { defaultStyles } from "./styles";
 export type { BibTexSlot, BibTexStyles, StyleMode } from "./styles";
