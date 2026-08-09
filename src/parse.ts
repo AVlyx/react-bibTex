@@ -1,5 +1,7 @@
+import type { BibTexPublication } from "./styles";
+
 export interface BibEntry {
-  type: string;
+  type: BibTexPublication;
   key: string;
   fields: Record<string, string>;
 }

@@ -1,43 +1,64 @@
 import { type CSSProperties } from "react";
 
 export type BibTexSlot =
-  | "entry"
-  | "marker"
+  | "entry" //for styling the whole span of the component
+  | "marker" //for styling the marker
+  | "address"
+  | "annote"
   | "author"
-  | "title"
+  | "booktitle"
+  | "chapter"
+  | "doi"
+  | "edition"
+  | "editor"
+  | "howpublished"
+  | "institution"
   | "journal"
+  | "month"
+  | "note"
+  | "number"
+  | "organization"
+  | "pages"
+  | "publisher"
+  | "school"
+  | "series"
+  | "title"
+  | "type"
   | "volume"
-  | "year"
-  | "doi";
+  | "year";
 
-export const defaultStyles: Record<BibTexSlot, CSSProperties> = {
-  entry: {},
-  marker: { verticalAlign: "super", fontSize: "smaller" },
-  author: {},
-  title: { fontStyle: "italic" },
-  journal: { fontWeight: 700 },
-  volume: {},
-  year: {},
-  doi: { color: "#1a73e8", textDecoration: "none" },
-};
+export type BibTexPublication =
+  | "article"
+  | "book"
+  | "booklet"
+  | "conference"
+  | "inbook"
+  | "incollection"
+  | "inproceedings"
+  | "manual"
+  | "mastersthesis"
+  | "misc"
+  | "phdthesis"
+  | "proceedings"
+  | "techreport"
+  | "unpublished";
+
+export type CitationStyle = "default" | "APA" | "MLA" | "Harvard" | "Chicago";
+
+export const MARKER = { verticalAlign: "super", fontSize: "smaller" };
+export const ITALIC = { fontStyle: "italic" };
+export const DOI = { color: "#1a73e8", textDecoration: "none" };
 
 export type BibTexStyles = Partial<Record<BibTexSlot, CSSProperties>>;
 
-/**
- * How a slot's override combines with its default. `merge` layers the override
- * on top, so partial overrides keep the rest of the default; `replace` takes the
- * override verbatim, which is the way to drop a default rather than restate it.
- *
- * Either way this is per slot: a slot with no override keeps its default.
- */
 export type StyleMode = "merge" | "replace";
 
 export const styleFor = (
-  slot: BibTexSlot,
-  styles?: BibTexStyles,
+  defaultStyle: CSSProperties,
+  styles?: CSSProperties,
   mode: StyleMode = "merge",
 ): CSSProperties => {
-  const override = styles?.[slot];
-  if (!override) return defaultStyles[slot];
-  return mode === "replace" ? override : { ...defaultStyles[slot], ...override };
+  const override = styles;
+  if (!override) return defaultStyle;
+  return mode === "replace" ? override : { ...defaultStyle, ...override };
 };
